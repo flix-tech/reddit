@@ -43,6 +43,19 @@ from r2.controllers.login import handle_login, handle_register
 from r2.models import *
 from r2.config import feature
 
+from oic.oic import Client
+from oic.oic.message import RegistrationResponse
+import json
+import hashlib
+import hmac
+from oic import rndstr
+
+from r2.lib.utils import query_string, UrlParser
+from oic.oic.message import AuthorizationResponse
+
+import os
+
+
 class PostController(ApiController):
     @csrf_exempt
     @validate(pref_lang = VLang('lang'),
@@ -229,8 +242,63 @@ class PostController(ApiController):
     @csrf_exempt
     @validate(dest = VDestination(default = "/"))
     def POST_oidc(self, dest, *a, **kw):
-        super(PostController, self).POST_register(*a, **kw)
-        if not c.user_is_loggedin:
-            return LoginPage(user_reg = request.POST.get('user'),
-                             dest = dest).render()
-        return self.redirect(dest)
+
+        client = Client()
+        issuer = 'https://sts.windows.net/d8d0ad3e-8bcf-48e9-9bb2-aee17c6c4fd5'
+        
+        client_info = {"client_id": "c5ccb993-1ac8-4bd7-b292-3e3b0664c811", "client_secret": "JhScLT1FGiiAzQemXuf4nKy0YK3lTNCWEUbjStRdLIg="}
+        client_reg = RegistrationResponse(**client_info)
+        client.client_info = client_reg
+
+        provider_info = client.provider_config(issuer)
+        client.provider_info = provider_info
+
+        c.oidc_state = rndstr()
+        c.oidc_nonce = rndstr()
+
+        args = {
+            "client_id": "c5ccb993-1ac8-4bd7-b292-3e3b0664c811",
+            "response_type": "code",
+            "scope": ["openid"],
+            "nonce": c.oidc_nonce,
+            "redirect_uri": "http://reddit.local/post/oidc"
+        }
+
+        result = client.do_authorization_request(state=c.oidc_state,
+                                                 request_args=args)
+
+        return result
+
+    @csrf_exempt
+    @validate(dest = VDestination(default = "/"))
+    def GET_oidc(self, dest, *a, **kw):
+
+        client = Client()
+
+        r = request.environ["QUERY_STRING"]
+
+        aresp = client.parse_response(AuthorizationResponse, info=r, sformat="urlencoded")
+
+        # response.content_type = "application/json"
+        # return json.dumps([aresp["code"]], sort_keys=True, indent=4)
+
+        code = aresp["code"]
+        # assert aresp["state"] == c.oidc_state
+
+        args = {
+            "code": aresp["code"],
+            "redirect_uri": "http://reddit.local/post/oidc",
+            "client_id": "c5ccb993-1ac8-4bd7-b292-3e3b0664c811",
+            "client_secret": "JhScLT1FGiiAzQemXuf4nKy0YK3lTNCWEUbjStRdLIg="
+        }
+
+        resp = client.do_access_token_request(scope="openid",
+                                              state=aresp["state"],
+                                              request_args=args,
+                                              authn_method="client_secret_post"
+                                              )
+
+        # return json.dumps(resp, sort_keys=True, indent=4)
+
+        
+
