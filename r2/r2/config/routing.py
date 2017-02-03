@@ -69,6 +69,8 @@ def make_map(config):
     mc('/adminoff', controller='forms', action='adminoff')
     mc('/submit', controller='front', action='submit')
 
+    mc('/oidc', controller='post', action='oidc')
+
     # redirect old urls to the new
     ABOUT_BASE = "https://about.reddit.com/"
     mc('/about', controller='redirect', action='redirect', dest=ABOUT_BASE, 

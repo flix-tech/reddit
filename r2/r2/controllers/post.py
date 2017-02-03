@@ -225,3 +225,12 @@ class PostController(ApiController):
             nsfw=nsfw,
         )
         return redirect(url(controller='front', action='explore'))
+
+    @csrf_exempt
+    @validate(dest = VDestination(default = "/"))
+    def POST_oidc(self, dest, *a, **kw):
+        super(PostController, self).POST_register(*a, **kw)
+        if not c.user_is_loggedin:
+            return LoginPage(user_reg = request.POST.get('user'),
+                             dest = dest).render()
+        return self.redirect(dest)
