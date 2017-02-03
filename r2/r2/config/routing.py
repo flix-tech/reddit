@@ -69,8 +69,6 @@ def make_map(config):
     mc('/adminoff', controller='forms', action='adminoff')
     mc('/submit', controller='front', action='submit')
 
-    mc('/oidc', controller='post', action='oidc')
-
     # redirect old urls to the new
     ABOUT_BASE = "https://about.reddit.com/"
     mc('/about', controller='redirect', action='redirect', dest=ABOUT_BASE, 
@@ -371,7 +369,7 @@ def make_map(config):
        requirements=dict(action="login|reg"))
     mc('/post/:action', controller='post',
        requirements=dict(action="options|over18|unlogged_options|optout"
-                         "|optin|login|reg|explore_settings"))
+                         "|optin|login|reg|explore_settings|oidc"))
 
     mc('/api', controller='redirect', action='redirect', dest='/dev/api')
     mc('/api/distinguish/:how', controller='api', action="distinguish")

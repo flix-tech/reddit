@@ -100,6 +100,5 @@ def load_controllers():
     from ipn import CoinbaseController
     from ipn import RedditGiftsController
     from mailgun import MailgunWebhookController
-    from oidc import OidcController
 
     _reddit_controllers.update((name.lower(), obj) for name, obj in locals().iteritems())
