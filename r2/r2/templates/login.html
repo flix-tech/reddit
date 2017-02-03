@@ -48,6 +48,26 @@
   </div>
 %endif
 
+
+<%
+  op = "oidc"
+  base = g.https_endpoint
+  tabindex = 1
+%>
+<form id="oidc-form" method="post" 
+          action="${add_sr(base + '/post/' + op)}"
+          class="form-v2">
+
+  <div class="c-clearfix c-submit-group">
+        <span class="c-form-throbber"></span>
+        <button type="submit" class="c-btn c-btn-primary c-pull-right" tabindex="${tabindex}">
+          OIDC
+        </button>
+      </div>
+</form>
+
+
+
 <%def name="login_form(register=False, user='', dest='', compact=False, autofocus=True)">
   %if not compact:
     <%
@@ -144,6 +164,7 @@
         %endif
       </div>
     </form>
+
   %else:
     <%
       op = "reg" if register else "login"
