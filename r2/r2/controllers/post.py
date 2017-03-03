@@ -249,7 +249,8 @@ class PostController(ApiController):
         issuer = g.live_config.get("oidc_issuer_url")
         client_id = g.live_config.get("oidc_client_id")
         client_secret = g.live_config.get("oidc_client_secret")
-        
+        redirect_url = "http://" + g.config.get("domain") + "/post/oidc"
+
         client_info = {"client_id": client_id, "client_secret": client_secret}
         client_reg = RegistrationResponse(**client_info)
         client.client_info = client_reg
@@ -266,7 +267,7 @@ class PostController(ApiController):
             "scope": ["openid"],
             "state": c.oidc_state,
             "nonce": c.oidc_nonce,
-            "redirect_uri": "http://reddit.local/post/oidc",
+            "redirect_uri": redirect_url,
             "response_mode": "form_post"
         }
 
