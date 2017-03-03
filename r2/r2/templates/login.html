@@ -40,31 +40,23 @@
       ${_('You need to login to do that.')}
     </h3>
   %endif
-  <div id="login">
-    ${login_panel(login_form, 
-                  user_reg = thing.user_reg, user_login = thing.user_login, 
-                  dest=thing.dest,
-                  registration_info=thing.registration_info)}
-  </div>
+  <%
+    op = "oidc"
+    base = g.https_endpoint
+    tabindex = 1
+  %>
+  <form id="oidc-form" method="GET" 
+            action="${add_sr(base + '/post/' + op)}"
+            class="form-v2">
+
+    <div class="c-clearfix c-submit-group">
+          <span class="c-form-throbber"></span>
+          <button type="submit" class="c-btn c-btn-primary c-pull-right" tabindex="${tabindex}">
+            OIDC
+          </button>
+        </div>
+  </form>
 %endif
-
-
-<%
-  op = "oidc"
-  base = g.https_endpoint
-  tabindex = 1
-%>
-<form id="oidc-form" method="GET" 
-          action="${add_sr(base + '/post/' + op)}"
-          class="form-v2">
-
-  <div class="c-clearfix c-submit-group">
-        <span class="c-form-throbber"></span>
-        <button type="submit" class="c-btn c-btn-primary c-pull-right" tabindex="${tabindex}">
-          OIDC
-        </button>
-      </div>
-</form>
 
 
 
