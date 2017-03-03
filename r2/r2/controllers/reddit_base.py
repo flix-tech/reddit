@@ -146,6 +146,8 @@ class UnloggedUser(FakeAccount):
         "pref_lang": VLang.validate_lang,
         "pref_hide_locationbar": bool,
         "pref_use_global_defaults": bool,
+        "pref_oidc_nonce": str,
+        "pref_oidc_state": str
     }
 
     def __init__(self, browser_langs, *a, **kw):
@@ -155,6 +157,8 @@ class UnloggedUser(FakeAccount):
         self._defaults['pref_lang'] = lang
         self._defaults['pref_hide_locationbar'] = False
         self._defaults['pref_use_global_defaults'] = False
+        self._defaults['pref_oidc_nonce'] = ""
+        self._defaults['pref_oidc_state'] = ""
         self._t.update(self._from_cookie())
 
     @property

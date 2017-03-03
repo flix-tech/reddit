@@ -39,12 +39,14 @@ from r2.lib.validator.preferences import (
 )
 from r2.lib.csrf import csrf_exempt
 from r2.models.recommend import ExploreSettings
-from r2.controllers.login import handle_login, handle_register
+from r2.controllers.login import handle_login, handle_register, handle_oidc_register
 from r2.models import *
 from r2.config import feature
 
 from oic.oic import Client
 from oic.oic.message import RegistrationResponse
+from oic.utils.authn.client import CLIENT_AUTHN_METHOD
+
 import json
 import hashlib
 import hmac
@@ -241,12 +243,14 @@ class PostController(ApiController):
 
     @csrf_exempt
     @validate(dest = VDestination(default = "/"))
-    def POST_oidc(self, dest, *a, **kw):
+    def GET_oidc(self, dest, *a, **kw):
 
-        client = Client()
-        issuer = 'https://sts.windows.net/d8d0ad3e-8bcf-48e9-9bb2-aee17c6c4fd5'
+        client = Client(client_authn_method=CLIENT_AUTHN_METHOD)
+        issuer = g.live_config.get("oidc_issuer_url")
+        client_id = g.live_config.get("oidc_client_id")
+        client_secret = g.live_config.get("oidc_client_secret")
         
-        client_info = {"client_id": "c5ccb993-1ac8-4bd7-b292-3e3b0664c811", "client_secret": "JhScLT1FGiiAzQemXuf4nKy0YK3lTNCWEUbjStRdLIg="}
+        client_info = {"client_id": client_id, "client_secret": client_secret}
         client_reg = RegistrationResponse(**client_info)
         client.client_info = client_reg
 
@@ -257,48 +261,74 @@ class PostController(ApiController):
         c.oidc_nonce = rndstr()
 
         args = {
-            "client_id": "c5ccb993-1ac8-4bd7-b292-3e3b0664c811",
-            "response_type": "code",
+            "client_id": client_info["client_id"],
+            "response_type": ["id_token"],
             "scope": ["openid"],
+            "state": c.oidc_state,
             "nonce": c.oidc_nonce,
-            "redirect_uri": "http://reddit.local/post/oidc"
+            "redirect_uri": "http://reddit.local/post/oidc",
+            "response_mode": "form_post"
         }
 
-        result = client.do_authorization_request(state=c.oidc_state,
-                                                 request_args=args)
+        setattr(c.user, "pref_oidc_nonce", c.oidc_nonce)
+        setattr(c.user, "pref_oidc_state", c.oidc_state)
+        c.user._commit()
 
-        return result
+        auth_req = client.construct_AuthorizationRequest(request_args=args)
+        login_url = auth_req.request(client.authorization_endpoint)
+
+        return redirect(login_url)
 
     @csrf_exempt
     @validate(dest = VDestination(default = "/"))
-    def GET_oidc(self, dest, *a, **kw):
+    @validatedForm(
+        VRatelimit(rate_ip=True, prefix="rate_register_"),
+    )
+    def POST_oidc(self, form, responder, dest, *a, **kw):
 
-        client = Client()
+        client = Client(client_authn_method=CLIENT_AUTHN_METHOD)
 
-        r = request.environ["QUERY_STRING"]
+        issuer = g.live_config.get("oidc_issuer_url")
+        client_id = g.live_config.get("oidc_client_id")
+        client_secret = g.live_config.get("oidc_client_secret")
+
+        client_info = {"client_id": client_id, "client_secret": client_secret}
+        client_reg = RegistrationResponse(**client_info)
+        client.client_info = client_reg
+        client.client_id = client_id
+
+        r = request.environ["webob._parsed_post_vars"][-1].read() # reads the post vars
 
         aresp = client.parse_response(AuthorizationResponse, info=r, sformat="urlencoded")
 
-        # response.content_type = "application/json"
-        # return json.dumps([aresp["code"]], sort_keys=True, indent=4)
+        session_nonce = getattr(c.user, "pref_oidc_nonce")
+        if "id_token" in aresp and aresp["id_token"]["nonce"] != session_nonce:
+            raise "The OIDC nonce does not match."
 
-        code = aresp["code"]
-        # assert aresp["state"] == c.oidc_state
+        session_state = getattr(c.user, "pref_oidc_state")
+        assert aresp["state"] == session_state
 
-        args = {
-            "code": aresp["code"],
-            "redirect_uri": "http://reddit.local/post/oidc",
-            "client_id": "c5ccb993-1ac8-4bd7-b292-3e3b0664c811",
-            "client_secret": "JhScLT1FGiiAzQemXuf4nKy0YK3lTNCWEUbjStRdLIg="
-        }
+        try:
+            account = Account._by_name(aresp["id_token"]["unique_name"])
 
-        resp = client.do_access_token_request(scope="openid",
-                                              state=aresp["state"],
-                                              request_args=args,
-                                              authn_method="client_secret_post"
-                                              )
+            kw.update(dict(
+                controller=self,
+                form=form,
+                responder=responder,
+                user=account,
+            ))
+            handle_login(**kw)
 
-        # return json.dumps(resp, sort_keys=True, indent=4)
+            return redirect("/")
 
-        
+        except NotFound:
+            kw.update(dict(
+                controller=self,
+                responder=responder,
+                form=form,
+                name=aresp["id_token"]["unique_name"],
+                email=aresp["id_token"]["upn"],
+            ))
+            handle_oidc_register(**kw)
 
+            return redirect("/")

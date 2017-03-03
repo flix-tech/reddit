@@ -185,3 +185,75 @@ def handle_register(
 
         controller._login(responder, user, rem)
         _event(error=None)
+
+def handle_oidc_register(
+    controller, form, responder, name, email,
+    rem=None, newsletter_subscribe=False,
+    sponsor=False, signature=None, **kwargs
+):
+
+    def _event(error):
+        g.events.login_event(
+            'register_attempt',
+            error_msg=error,
+            user_name=name,
+            email=email,
+            remember_me=rem,
+            newsletter=newsletter_subscribe,
+            signature=signature,
+            request=request,
+            context=c)
+
+    if signature and not signature.is_valid():
+        _event(error="SIGNATURE")
+        abort(403)
+
+    elif responder.has_errors('ratelimit', errors.RATELIMIT):
+        _event(error='RATELIMIT')
+
+    elif newsletter_subscribe and not email:
+        c.errors.add(errors.NEWSLETTER_NO_EMAIL, field="email")
+        form.has_errors("email", errors.NEWSLETTER_NO_EMAIL)
+        _event(error='NEWSLETTER_NO_EMAIL')
+
+    elif sponsor and not email:
+        c.errors.add(errors.SPONSOR_NO_EMAIL, field="email")
+        form.has_errors("email", errors.SPONSOR_NO_EMAIL)
+        _event(error='SPONSOR_NO_EMAIL')
+
+    else:
+        try:
+            user = register(name, "", request.ip)
+        except AccountExists:
+            c.errors.add(errors.USERNAME_TAKEN, field="user")
+            form.has_errors("user", errors.USERNAME_TAKEN)
+            _event(error='USERNAME_TAKEN')
+            return
+
+        VRatelimit.ratelimit(rate_ip=True, prefix="rate_register_")
+
+        # anything else we know (email, languages)?
+        if email:
+            user.set_email(email)
+            emailer.verify_email(user)
+
+        user.pref_lang = c.lang
+        user._commit()
+
+        amqp.add_item('new_account', user._fullname)
+
+        hooks.get_hook("account.registered").call(user=user)
+
+        reject = hooks.get_hook("account.spotcheck").call(account=user)
+        if any(reject):
+            _event(error='ACCOUNT_SPOTCHECK')
+            return
+
+        if newsletter_subscribe and email:
+            try:
+                newsletter.add_subscriber(email, source="register")
+            except newsletter.NewsletterError as e:
+                g.log.warning("Failed to subscribe: %r" % e)
+
+        controller._login(responder, user, rem)
+        _event(error=None)

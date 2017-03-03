@@ -403,6 +403,9 @@ class Globals(object):
         ConfigValue.str: [
             'listing_chooser_gold_multi',
             'listing_chooser_explore_sr',
+            'oidc_issuer_url',
+            'oidc_client_id',
+            'oidc_client_secret'
         ],
         ConfigValue.messages: [
             'welcomebar_messages',
