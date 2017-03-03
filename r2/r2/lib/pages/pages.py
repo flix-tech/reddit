@@ -649,8 +649,8 @@ class Reddit(Templated):
             ps.append(SidebarMessage(gold_sidebar_message[0],
                                      extra_class="gold"))
 
-        if not c.user_is_loggedin and self.loginbox and not g.read_only_mode:
-            ps.append(LoginFormWide())
+        #if not c.user_is_loggedin and self.loginbox and not g.read_only_mode:
+        #    ps.append(LoginFormWide())
 
         if isinstance(c.site, DomainSR) and c.user_is_admin:
             from r2.lib.pages.admin_pages import AdminNotesSidebar
