@@ -245,24 +245,13 @@ class PostController(ApiController):
     @validate(dest = VDestination(default = "/"))
     def GET_oidc(self, dest, *a, **kw):
 
-        client = Client(client_authn_method=CLIENT_AUTHN_METHOD)
-        issuer = g.live_config.get("oidc_issuer_url")
-        client_id = g.live_config.get("oidc_client_id")
-        client_secret = g.live_config.get("oidc_client_secret")
-        redirect_url = "http://" + g.config.get("domain") + "/post/oidc"
-
-        client_info = {"client_id": client_id, "client_secret": client_secret}
-        client_reg = RegistrationResponse(**client_info)
-        client.client_info = client_reg
-
-        provider_info = client.provider_config(issuer)
-        client.provider_info = provider_info
-
+        client = self.getOidcClient()
         c.oidc_state = rndstr()
         c.oidc_nonce = rndstr()
+        redirect_url = "http://" + g.config.get("domain") + "/post/oidc"
 
         args = {
-            "client_id": client_info["client_id"],
+            "client_id": client.client_id,
             "response_type": ["id_token"],
             "scope": ["openid"],
             "state": c.oidc_state,
@@ -287,17 +276,7 @@ class PostController(ApiController):
     )
     def POST_oidc(self, form, responder, dest, *a, **kw):
 
-        client = Client(client_authn_method=CLIENT_AUTHN_METHOD)
-
-        issuer = g.live_config.get("oidc_issuer_url")
-        client_id = g.live_config.get("oidc_client_id")
-        client_secret = g.live_config.get("oidc_client_secret")
-
-        client_info = {"client_id": client_id, "client_secret": client_secret}
-        client_reg = RegistrationResponse(**client_info)
-        client.client_info = client_reg
-        client.client_id = client_id
-
+        client = self.getOidcClient()
         r = request.environ["webob._parsed_post_vars"][-1].read() # reads the post vars
 
         aresp = client.parse_response(AuthorizationResponse, info=r, sformat="urlencoded")
@@ -323,13 +302,35 @@ class PostController(ApiController):
             return redirect("/")
 
         except NotFound:
+
+            username = aresp["id_token"]["unique_name"]
+            username.replace('@flixbus.com', '')
+            username.replace('@flixbus.de', '')
+
             kw.update(dict(
                 controller=self,
                 responder=responder,
                 form=form,
-                name=aresp["id_token"]["unique_name"],
+                name=username,
                 email=aresp["id_token"]["upn"],
             ))
             handle_oidc_register(**kw)
 
             return redirect("/")
+
+    def getOidcClient(self):
+        client = Client(client_authn_method=CLIENT_AUTHN_METHOD)
+
+        issuer = g.live_config.get("oidc_issuer_url")
+        client_id = g.live_config.get("oidc_client_id")
+        client_secret = g.live_config.get("oidc_client_secret")
+
+        client_info = {"client_id": client_id, "client_secret": client_secret}
+        client_reg = RegistrationResponse(**client_info)
+        client.client_info = client_reg
+        client.client_id = client_id
+
+        provider_info = client.provider_config(issuer)
+        client.provider_info = provider_info
+
+        return client
