@@ -318,6 +318,9 @@ class Globals(object):
             'events_collector_url',
             'events_collector_test_url',
             'search_provider',
+            'oidc_issuer_url',
+            'oidc_client_id',
+            'oidc_client_secret'
         ],
 
         ConfigValue.choice(ONE=CL_ONE, QUORUM=CL_QUORUM): [
@@ -402,10 +405,7 @@ class Globals(object):
         ],
         ConfigValue.str: [
             'listing_chooser_gold_multi',
-            'listing_chooser_explore_sr',
-            'oidc_issuer_url',
-            'oidc_client_id',
-            'oidc_client_secret'
+            'listing_chooser_explore_sr'
         ],
         ConfigValue.messages: [
             'welcomebar_messages',

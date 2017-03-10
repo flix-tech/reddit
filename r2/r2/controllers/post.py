@@ -333,9 +333,9 @@ class PostController(ApiController):
     def getOidcClient(self):
         client = Client(client_authn_method=CLIENT_AUTHN_METHOD)
 
-        issuer = g.live_config.get("oidc_issuer_url")
-        client_id = g.live_config.get("oidc_client_id")
-        client_secret = g.live_config.get("oidc_client_secret")
+        issuer = g.config.get("oidc_issuer_url")
+        client_id = g.config.get("oidc_client_id")
+        client_secret = g.config.get("oidc_client_secret")
 
         client_info = {"client_id": client_id, "client_secret": client_secret}
         client_reg = RegistrationResponse(**client_info)
