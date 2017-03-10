@@ -289,7 +289,10 @@ class PostController(ApiController):
         assert aresp["state"] == session_state
 
         try:
-            account = Account._by_name(aresp["id_token"]["unique_name"])
+            username = aresp["id_token"]["unique_name"]
+            username = username.replace('@flixbus.com', '')
+            username = username.replace('@flixbus.de', '')
+            account = Account._by_name(username)
 
             kw.update(dict(
                 controller=self,
@@ -298,6 +301,9 @@ class PostController(ApiController):
                 user=account,
             ))
             handle_login(**kw)
+
+            if c.user.name in g.admins:
+                self.enable_admin_mode(c.user)
 
             return redirect("/")
 
@@ -315,6 +321,9 @@ class PostController(ApiController):
                 email=aresp["id_token"]["upn"],
             ))
             handle_oidc_register(**kw)
+
+            if c.user.name in g.admins:
+                self.enable_admin_mode(c.user)
 
             return redirect("/")
 
