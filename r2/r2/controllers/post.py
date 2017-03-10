@@ -325,6 +325,9 @@ class PostController(ApiController):
             if c.user.name in g.admins:
                 self.enable_admin_mode(c.user)
 
+            c.user.email_verified = True
+            c.user._commit()
+
             return redirect("/")
 
     def getOidcClient(self):
