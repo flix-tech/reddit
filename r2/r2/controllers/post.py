@@ -304,8 +304,8 @@ class PostController(ApiController):
         except NotFound:
 
             username = aresp["id_token"]["unique_name"]
-            username.replace('@flixbus.com', '')
-            username.replace('@flixbus.de', '')
+            username = username.replace('@flixbus.com', '')
+            username = username.replace('@flixbus.de', '')
 
             kw.update(dict(
                 controller=self,
