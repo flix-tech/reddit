@@ -248,7 +248,7 @@ class PostController(ApiController):
         client = self.getOidcClient()
         c.oidc_state = rndstr()
         c.oidc_nonce = rndstr()
-        redirect_url = "http://" + g.config.get("domain") + "/post/oidc"
+        redirect_url = g.config.get("default_scheme") + "://" + g.config.get("domain") + "/post/oidc"
 
         args = {
             "client_id": client.client_id,
