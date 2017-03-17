@@ -271,9 +271,6 @@ class PostController(ApiController):
 
     @csrf_exempt
     @validate(dest = VDestination(default = "/"))
-    @validatedForm(
-        VRatelimit(rate_ip=True, prefix="rate_register_"),
-    )
     def POST_oidc(self, form, responder, dest, *a, **kw):
 
         client = self.getOidcClient()
