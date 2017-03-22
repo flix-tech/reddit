@@ -1567,7 +1567,7 @@ class VPasswordChange(VPassword):
 MIN_USERNAME_LENGTH = 3
 MAX_USERNAME_LENGTH = 20
 
-user_rx = re.compile(r"\A[\w-]+\Z", re.UNICODE)
+user_rx = re.compile(r"\A[\w\-\.]+\Z", re.UNICODE)
 
 def chkuser(x):
     if x is None:
