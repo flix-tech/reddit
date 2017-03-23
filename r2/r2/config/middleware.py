@@ -424,6 +424,23 @@ class SafetyMiddleware(object):
             return start_response(status, sanitized, exc_info)
         return self.app(environ, safe_start_response)
 
+class LoginMiddleware(object):
+
+    def __init__(self, app, config):
+        self.app = app
+        self.config = config
+
+    def __call__(self, environ, start_response):
+        def safe_start_response(status, headers, exc_info=None):
+            g = self.config['pylons.app_globals']
+            if environ["HTTP_HOST"] == g.domain and "static" in environ["PATH_INFO"] or "/post/oidc" in environ["PATH_INFO"]:
+                return start_response(status, headers, exc_info)
+
+            if "reddit_session" not in environ["webob._parsed_cookies"][0]:
+                return start_response("302 Found", [("Location", "/post/oidc")], exc_info)
+            return start_response(status, headers, exc_info)
+
+        return self.app(environ, safe_start_response)
 
 class RedditApp(PylonsApp):
 
@@ -521,6 +538,7 @@ def make_app(global_conf, full_stack=True, **app_conf):
     if profile_directory:
         app = ProfilingMiddleware(app, profile_directory)
 
+    app = LoginMiddleware(app, config)
     app = DomainListingMiddleware(app)
     app = SubredditMiddleware(app)
     app = ExtensionMiddleware(app)
