@@ -305,7 +305,7 @@ class PostController(ApiController):
             if c.user.name in g.admins:
                 self.enable_admin_mode(c.user)
 
-            return redirect("/")
+            return redirect("/r/all")
 
         except NotFound:
 
@@ -328,7 +328,7 @@ class PostController(ApiController):
             c.user.email_verified = True
             c.user._commit()
 
-            return redirect("/")
+            return redirect("/r/all")
 
     def getOidcClient(self):
         client = Client(client_authn_method=CLIENT_AUTHN_METHOD)
